@@ -18,7 +18,7 @@ typedef struct octostatus
 {
     String state = "<none>";
     String job = "<none>";
-    float progress = 0; // 0.0 .. 1.0f
+    float progress = 0; // 0.0 .. 100.0f
     int elapsedSeconds = 0;
     int estimatedSecondsLeft = 0;
     octotemp toolTemp;
@@ -29,7 +29,6 @@ class octoprint
 {
     private:
         StaticJsonDocument<1024> _doc;      // should be enough, since the filter ignores most values anyway
-        StaticJsonDocument<256> _filter;    // TODO set up filter
         WiFiClient _client;
         String _url, _apiKey;
 

@@ -16,13 +16,13 @@ octostatus octoprint::getStatus (void)
 
     // get "state" data
     // http.begin(this->_client, this->_url + "/api/printer");
-    http.begin(_client, _url + "/api/printer?exclude=sd,state");
+    http.begin(_client, _url + "/api/printer?exclude=sd,state");    // http://octopi.local/api/printer?exclude=sd,state
     http.addHeader("X-Api-Key", _apiKey);
     result = http.GET();
     dprintf("GET state result: %d\n", result);
     if (result == 200)  // == OK
     {
-        DeserializationError error = deserializeJson(_doc, http.getStream(), DeserializationOption::Filter(_filter));
+        DeserializationError error = deserializeJson(_doc, http.getStream());
         
         if (error)
         {
@@ -72,7 +72,11 @@ octostatus octoprint::getStatus (void)
 
             // only if found
             if (dotIndex > 0)
-                receivedStatus.job = receivedStatus.job.substring(0, dotIndex - 1);
+                receivedStatus.job = receivedStatus.job.substring(0, dotIndex);
+
+            // ignore the "CFFFP_" part prepended by cura
+            if (receivedStatus.job.startsWith(F("CFFFP_")))
+                receivedStatus.job = receivedStatus.job.substring(6);
 
             // const char* job_user = job["user"];
 

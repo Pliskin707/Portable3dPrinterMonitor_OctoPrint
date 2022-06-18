@@ -35,6 +35,7 @@ void setup() {
 
   // status display
   display.setup();
+  display.setStyle(progressBar);
 
   // Wifi
   IPAddress local_IP(192, 168, 0, 50);
@@ -87,18 +88,10 @@ void loop() {
   // program logic
   if (time >= next)
   {
-    next = time + 10000;
-    dprintf("Systime: %lu ms; WLAN: %sconnected (as %s)\n", time, (connected ? "":"dis"), WiFi.localIP().toString().c_str());
+    next = time + 5000;
+    //dprintf("Systime: %lu ms; WLAN: %sconnected (as %s)\n", time, (connected ? "":"dis"), WiFi.localIP().toString().c_str());
     const octostatus printerStatus = octopi.getStatus();
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.println(printerStatus.state);
-    display.println(printerStatus.job);
-    display.println("Progress:\n");
-    display.setTextSize(4);
-    display.printf_P(PSTR("%.1f%%"), printerStatus.progress);
-    display.setTextSize(1);
-    display.display();
+    display.updateContent(printerStatus);
 
     if (connected)
     {
