@@ -1,10 +1,11 @@
 #include <Arduino.h>
-
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include "ota/ota.hpp"
 #include "projutils/projutils.hpp"
 #include "config.hpp"
+#include "oled/oled.hpp"
+#include "octoprint/octoprint.hpp"
 
 using namespace pliskin;
 
@@ -16,11 +17,14 @@ using namespace pliskin;
  * 
  * const char* ssid = "<YourSSIDhere>";
  * const char* password = "<YourPasswordHere>";
+ * const char* octoapi = "<YourOctoprintApiKey>";
  */
 #include "../../../../../../wifiauth2.h"
 
 static bool mDNS_init_ok = false;
 WiFiClient client;
+statusDisplay display(128, 64, &Wire, -1);
+octoprint octopi(octoapi);
 
 void setup() {
   #ifndef DEBUG_PRINT
@@ -28,6 +32,9 @@ void setup() {
   #else
   Serial.begin(115200);
   #endif
+
+  // status display
+  display.setup();
 
   // Wifi
   IPAddress local_IP(192, 168, 0, 50);
@@ -82,6 +89,16 @@ void loop() {
   {
     next = time + 10000;
     dprintf("Systime: %lu ms; WLAN: %sconnected (as %s)\n", time, (connected ? "":"dis"), WiFi.localIP().toString().c_str());
+    const octostatus printerStatus = octopi.getStatus();
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println(printerStatus.state);
+    display.println(printerStatus.job);
+    display.println("Progress:\n");
+    display.setTextSize(4);
+    display.printf_P(PSTR("%.1f%%"), printerStatus.progress);
+    display.setTextSize(1);
+    display.display();
 
     if (connected)
     {
