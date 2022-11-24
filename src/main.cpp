@@ -90,12 +90,21 @@ void loop() {
   {
     next = time + 5000;
     //dprintf("Systime: %lu ms; WLAN: %sconnected (as %s)\n", time, (connected ? "":"dis"), WiFi.localIP().toString().c_str());
-    const octostatus printerStatus = octopi.getStatus();
-    display.updateContent(printerStatus);
+    octostatus printerStatus;
+    
+    if (octopi.getStatus(printerStatus))
+      display.updateContent(printerStatus);
 
     if (connected)
     {
-        // TODO
+        if (printerStatus.state.compareTo("Offline after error") == 0)
+        {
+          display.fillRect(0, 16, display.width(), display.height() - 16, SSD1306_BLACK);
+          display.setCursor(0, 16);
+          display.print("Trying to reconnect\nserver to printer...\n");
+          display.printf_P(PSTR("Result: %d"), octopi.reconnectServerToPrinter());
+          display.display();
+        }
     }
     else
       WiFi.reconnect();

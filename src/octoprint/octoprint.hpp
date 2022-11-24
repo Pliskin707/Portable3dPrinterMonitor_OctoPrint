@@ -34,7 +34,8 @@ class octoprint
 
     public:
         octoprint(const String &apiKey, const String &octoAddress = "http://octopi.local") : _url(octoAddress), _apiKey(apiKey) {};
-        octostatus getStatus (void);
+        bool getStatus (octostatus &status);
+        int reconnectServerToPrinter (void);   // issues a "Serial Connect" command to the server
 };
 
 };

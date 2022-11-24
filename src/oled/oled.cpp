@@ -5,6 +5,12 @@ namespace pliskin
 
 enum printerState {Idle, Preheating, Printing, WarningOrError};
 
+// 'WarningSymbol, 16x16px
+const unsigned char WarningSymbol[] PROGMEM = {
+	0x00, 0x00, 0x00, 0x00, 0x01, 0x80, 0x03, 0xc0, 0x02, 0x40, 0x06, 0x60, 0x06, 0x60, 0x0e, 0x70, 
+	0x1e, 0x78, 0x1e, 0x78, 0x3f, 0xfc, 0x3e, 0x7c, 0x7e, 0x7e, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00
+};
+
 static printerState getPrinterState (const octostatus &status)
 {
     if (status.state.compareTo("Operational") == 0)
@@ -13,7 +19,9 @@ static printerState getPrinterState (const octostatus &status)
     if (status.state.compareTo("Printing") == 0)
     {
         if ((status.progress < 1) && 
-            ((status.toolTemp.setpoint - status.toolTemp.measured) > 10))
+            (((status.toolTemp.setpoint - status.toolTemp.measured) > 10) || 
+             ((status.bedTemp.setpoint - status.bedTemp.measured) > 10) ||
+             ((status.bedTemp.setpoint > 0) && (status.toolTemp.measured < 150))))
         {
             return Preheating;
         }
@@ -31,7 +39,7 @@ void statusDisplay::setup (void)
     setTextColor(SSD1306_WHITE, SSD1306_BLACK);
     setTextWrap(false);
     clearDisplay();
-    setCursor(0,0);
+    setCursor(0,16);
     centerText("3D Printer Monitor");
     display();
 }
@@ -108,24 +116,30 @@ void statusDisplay::styleProgressBar (const octostatus &status)
     {
         case WarningOrError:
         {
-            setTextSize(2); // big yellow text in line 0 and 1
+            showWarning("Attention");
+            setTextWrap(true);
+            setCursor(0, 20);
+            setTextSize(2);
             print(status.state);
+            setTextWrap(false);
             setTextSize(1);
 
-            showTempBars = true;
+            //showTempBars = true;
         }
         break;
 
         case Printing:
         {
             // not yet done    
-            printf_P(PSTR("\n\n%s (%d|%d)"), status.state.c_str(), (int) status.toolTemp.measured, (int) status.bedTemp.measured);  // blue starts at line 2
+            char text[40];
+            snprintf_P(text, sizeof(text), PSTR("%s (%d;%d)"), status.state.c_str(), (int) status.toolTemp.measured, (int) status.bedTemp.measured);  // blue starts at line 2
+            setCursor(0, 16);
+            centerText(text);
             setCursor(0, 28);
-            println(status.job);
+            centerText(status.job.c_str());
 
             
             setCursor(0, 36);   // between line 4 and 5
-            char text[10];
             if (status.estimatedSecondsLeft > 0)
             {
                 div_t qr = div(status.estimatedSecondsLeft, 60);
@@ -179,17 +193,30 @@ void statusDisplay::printTempBarAt (const uint16_t y, const temperatureProbe pro
     const octotemp &temperature = ((probe == bed) ? status.bedTemp : status.toolTemp);
     int textPos = snprintf_P(text, sizeof(text), PSTR("%s: %.1f"), (probe == bed) ? "Bed":"Tool", temperature.measured);
 
-    if (temperature.setpoint <= 0)
+    if (temperature.setpoint <= 0)  // setpoint = off
         startTemp = 0;
-    else if (startTemp <= 0)
-        startTemp = temperature.measured;
+    else if (startTemp <= 0)    // no start temperature defined yet
+    {
+        if (fabsf(temperature.measured - temperature.setpoint) < 1)
+            startTemp = 0.1;    // already reached -> prevent the bar from flickering
+        else
+            startTemp = temperature.measured;
+    }
 
     if (startTemp > 0)
     {
         textPos += snprintf_P(text + textPos, sizeof(text) - textPos, PSTR("/%.1f"), temperature.setpoint);
-        progress = 100 * (temperature.measured - startTemp) / (temperature.setpoint - startTemp);
-        if (progress > 100)
+
+        if (temperature.measured >= temperature.setpoint)
+        {
             progress = 100;
+        }
+        else
+        {
+            progress = 100 * (temperature.measured - startTemp) / (temperature.setpoint - startTemp);
+            if (progress > 100)
+                progress = 100;
+        }
     }
 
     strncpy_P(text + textPos, PSTR(" C"), sizeof(text) - textPos);
@@ -256,6 +283,25 @@ int16_t statusDisplay::centerText (const char * const text)
     print(text);
 
     return xPos;
+}
+
+void statusDisplay::showWarning (const char * const text)
+{
+    fillRect(0, 0, width(), 16, SSD1306_BLACK);
+
+    if (text)
+    {
+        drawBitmap(1, 0, WarningSymbol, 16, 16, SSD1306_WHITE);
+        drawBitmap(111, 0, WarningSymbol, 16, 16, SSD1306_WHITE);
+        drawRect(23, 2, 82, 12, SSD1306_WHITE);
+        setCursor(0, 4);
+        centerText(text);
+    }
+    else
+    {
+        for (uint16_t ii = 0, xpos = 1; ii < 6; ii++, xpos += (16 + 6))
+            drawBitmap(xpos, 0, WarningSymbol, 16, 16, SSD1306_WHITE);
+    }
 }
 
 };

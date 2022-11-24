@@ -42,6 +42,7 @@ class statusDisplay: public Adafruit_SSD1306
         void setStyle (const statusStyle style);
         void updateContent (const octostatus &status);
         int16_t centerText (const char * const text);   // returns the start X-position of the text
+        void showWarning (const char * const text = nullptr);
 };
 
 };
