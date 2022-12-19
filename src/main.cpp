@@ -19,7 +19,7 @@ using namespace pliskin;
  * const char* password = "<YourPasswordHere>";
  * const char* octoapi = "<YourOctoprintApiKey>";
  */
-#include "../../../../../../wifiauth2.h"
+#include "../wifiauth2.h"
 
 static bool mDNS_init_ok = false;
 WiFiClient client;
